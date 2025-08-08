@@ -198,9 +198,9 @@ public:
       input_cloud_subs_.push_back(
           nh_->create_subscription<sensor_msgs::msg::PointCloud2>(
               ss.str(), queue_size,
-              [this, i](const sensor_msgs::msg::PointCloud2::ConstPtr &msg) {
-                this->receiveCloudSafe(msg, i);
-              }));
+              [this,
+               i](const std::shared_ptr<const sensor_msgs::msg::PointCloud2>
+                      &msg) { this->receiveCloudSafe(msg, i); }));
     }
 
     if (planning_freq_ > 0.f) {
@@ -439,17 +439,18 @@ public:
     path_pub_->publish(res->plan);
     RCLCPP_INFO(nh_->get_logger(),
                 "Planning robot %s path (%lu poses) in map %s: %.3f s.",
-                robot_frame_, res->plan.poses.size(), map_frame_,
-                t.seconds_elapsed());
+                robot_frame_.c_str(), res->plan.poses.size(),
+                map_frame_.c_str(), t.seconds_elapsed());
   }
 
-  void receiveCloud(const sensor_msgs::msg::PointCloud2::ConstPtr &input,
-                    int i) {
+  void receiveCloud(
+      const std::shared_ptr<const sensor_msgs::msg::PointCloud2> &input,
+      int i) {
     const auto age = (nh_->get_clock()->now() - input->header.stamp).seconds();
     if (age > max_cloud_age_) {
       RCLCPP_INFO(nh_->get_logger(),
                   "Skipping old input cloud from %s, age %.1f s > %.1f s.",
-                  input->header.frame_id, age, max_cloud_age_);
+                  input->header.frame_id.c_str(), age, max_cloud_age_);
       return;
     }
 
@@ -474,14 +475,16 @@ public:
     }
   }
 
-  void receiveCloudSafe(const sensor_msgs::msg::PointCloud2::ConstPtr &input,
-                        uint8_t level) {
+  void receiveCloudSafe(
+      const std::shared_ptr<const sensor_msgs::msg::PointCloud2> &input,
+      uint8_t level) {
     try {
       receiveCloud(input, level);
     } catch (const tf2::TransformException &ex) {
       RCLCPP_ERROR(nh_->get_logger(),
                    "Could not transform input cloud from %s to %s: %s.",
-                   input->header.frame_id, map_frame_, ex.what());
+                   input->header.frame_id.c_str(), map_frame_.c_str(),
+                   ex.what());
       return;
     } catch (const std::runtime_error &ex) {
       RCLCPP_ERROR(nh_->get_logger(), "Input cloud processing failed: %s",
