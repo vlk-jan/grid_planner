@@ -136,19 +136,19 @@ public:
     last_request_->tolerance = 2.0f;
 
     position_field_ =
-        nh->declare_parameter<std::string>("position_field", position_field_);
-    cost_fields_ = nh->declare_parameter<std::vector<std::string>>(
+        nh_->declare_parameter<std::string>("position_field", position_field_);
+    cost_fields_ = nh_->declare_parameter<std::vector<std::string>>(
         "cost_fields", cost_fields_);
-    cloud_weights_ = nh->declare_parameter<std::vector<double>>("cloud_weights",
-                                                                cloud_weights_);
-    map_frame_ = nh->declare_parameter<std::string>("map_frame", map_frame_);
+    cloud_weights_ = nh_->declare_parameter<std::vector<double>>(
+        "cloud_weights", cloud_weights_);
+    map_frame_ = nh_->declare_parameter<std::string>("map_frame", map_frame_);
     robot_frame_ =
-        nh->declare_parameter<std::string>("robot_frame", robot_frame_);
-    tf_timeout_ = nh->declare_parameter<float>("tf_timeout", tf_timeout_);
+        nh_->declare_parameter<std::string>("robot_frame", robot_frame_);
+    tf_timeout_ = nh_->declare_parameter<float>("tf_timeout", tf_timeout_);
 
     max_cloud_age_ =
-        nh->declare_parameter<float>("max_cloud_age", max_cloud_age_);
-    input_range_ = nh->declare_parameter<float>("input_range", input_range_);
+        nh_->declare_parameter<float>("max_cloud_age", max_cloud_age_);
+    input_range_ = nh_->declare_parameter<float>("input_range", input_range_);
 
     float cell_size = nh_->declare_parameter<float>("cell_size", 1.0f);
     float forget_factor = nh_->declare_parameter<float>("forget_factor", 1.0f);

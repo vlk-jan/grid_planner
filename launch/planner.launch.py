@@ -7,7 +7,7 @@ def generate_launch_description():
         [
             Node(
                 package="grid_planner",
-                executable="planner",
+                executable="grid_planner",
                 name="grid_planner",
                 namespace="grid_planner",
                 output="screen",
