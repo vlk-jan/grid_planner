@@ -139,6 +139,8 @@ public:
         nh_->declare_parameter<std::string>("position_field", position_field_);
     cost_fields_ = nh_->declare_parameter<std::vector<std::string>>(
         "cost_fields", cost_fields_);
+    which_cloud_ = nh_->declare_parameter<std::vector<long int>>("which_cloud",
+                                                                 which_cloud_);
     cloud_weights_ = nh_->declare_parameter<std::vector<double>>(
         "cloud_weights", cloud_weights_);
     map_frame_ = nh_->declare_parameter<std::string>("map_frame", map_frame_);
@@ -161,8 +163,8 @@ public:
     int queue_size = nh_->declare_parameter<int>("input_queue_size", 2);
     queue_size = std::max(1, queue_size);
 
-    std::vector<float> max_costs;
-    std::vector<float> default_costs;
+    std::vector<float> max_costs(cost_fields_.size());
+    std::vector<float> default_costs(cost_fields_.size());
     for (int i = 0; i < num_input_clouds; ++i) {
       max_costs.push_back(std::numeric_limits<float>::quiet_NaN());
       default_costs.push_back(1.f);
@@ -460,18 +462,31 @@ public:
         rclcpp::Duration::from_seconds(tf_timeout_));
 
     Eigen::Isometry3f transform(tf2::transformToEigen(cloud_to_map.transform));
-
-    const uint8_t level = i < cloud_levels_.size() ? cloud_levels_[i] : i;
-    const float weight = i < cloud_weights_.size() ? cloud_weights_[i] : 1.0;
-    const std::string cost_field =
-        i < cost_fields_.size() ? cost_fields_[i] : "cost";
     sensor_msgs::PointCloud2ConstIterator<float> x_it(*input, position_field_);
-    sensor_msgs::PointCloud2ConstIterator<float> cost_it(*input, cost_field);
 
-    for (int i = 0; i < input->height * input->width; ++i, ++x_it, ++cost_it) {
+    std::vector<uint8_t> levels;
+    std::vector<uint8_t> weights;
+    std::vector<sensor_msgs::PointCloud2ConstIterator<float>> cost_iters;
+
+    for (int j = 0; j < cost_fields_.size(); ++j) {
+      if (which_cloud_[j] == i) {
+        levels.push_back(j < cloud_levels_.size() ? cloud_levels_[j] : j);
+        weights.push_back(j < cloud_weights_.size() ? cloud_weights_[j] : 1.0);
+        const std::string cost_field =
+            j < cost_fields_.size() ? cost_fields_[j] : "cost";
+        cost_iters.push_back(
+            sensor_msgs::PointCloud2ConstIterator<float>(*input, cost_field));
+      }
+    }
+
+    for (int i = 0; i < input->height * input->width; ++i, ++x_it) {
       Vec3 p(x_it[0], x_it[1], x_it[2]);
       p = transform * p;
-      grid_.updatePointCost({p.x(), p.y()}, level, weight * cost_it[0]);
+      for (int j = 0; j < levels.size(); ++j) {
+        grid_.updatePointCost({p.x(), p.y()}, levels[j],
+                              weights[j] * cost_iters[j][0]);
+        ++cost_iters[j];
+      }
     }
   }
 
@@ -523,6 +538,7 @@ protected:
   // Input
   std::string position_field_{"x"};
   std::vector<std::string> cost_fields_;
+  std::vector<long int> which_cloud_;
   std::vector<double> cloud_weights_;
   std::vector<int> cloud_levels_;
   float max_cloud_age_{5.0};
