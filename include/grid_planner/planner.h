@@ -11,6 +11,7 @@
 #include <functional>
 #include <geometry_msgs/msg/pose_stamped.hpp>
 #include <geometry_msgs/msg/transform_stamped.hpp>
+#include <nav2_msgs/srv/clear_entire_costmap.hpp>
 #include <nav_msgs/msg/path.hpp>
 #include <nav_msgs/srv/get_plan.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -229,6 +230,11 @@ public:
     get_plan_service_ = nh_->create_service<nav_msgs::srv::GetPlan>(
         "get_plan", std::bind(&Planner::requestPlan, this,
                               std::placeholders::_1, std::placeholders::_2));
+    clear_map_service_ =
+        nh_->create_service<nav2_msgs::srv::ClearEntireCostmap>(
+            "clear_plan_map",
+            std::bind(&Planner::clearMap, this, std::placeholders::_1,
+                      std::placeholders::_2));
 
     RCLCPP_INFO(nh_->get_logger(), "Node initialized.");
   }
@@ -430,6 +436,12 @@ public:
     return planSafe(req, res);
   }
 
+  void clearMap(nav2_msgs::srv::ClearEntireCostmap::Request::SharedPtr req,
+                nav2_msgs::srv::ClearEntireCostmap::Response::SharedPtr res) {
+    grid_.clear();
+    RCLCPP_WARN(nh_->get_logger(), "Map cleared.");
+  }
+
   void planningTimer() {
     RCLCPP_INFO(nh_->get_logger(), "Planning timer callback.");
     Timer t;
@@ -534,6 +546,8 @@ protected:
   // Services
   rclcpp::Service<nav_msgs::srv::GetPlan>::SharedPtr get_plan_service_;
   nav_msgs::srv::GetPlan::Request::SharedPtr last_request_;
+  rclcpp::Service<nav2_msgs::srv::ClearEntireCostmap>::SharedPtr
+      clear_map_service_;
 
   // Input
   std::string position_field_{"x"};

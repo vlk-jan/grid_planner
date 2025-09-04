@@ -5,6 +5,7 @@ find_package(ament_cmake REQUIRED)
 
 find_package(Boost COMPONENTS graph chrono REQUIRED)
 find_package(Eigen3 REQUIRED NO_MODULE)
+find_package(OpenMP REQUIRED)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(eigen REQUIRED eigen3)
 include_directories(${eigen_INCLUDE_DIRS})
@@ -14,6 +15,7 @@ find_package(rclcpp REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
+find_package(nav2_msgs REQUIRED)
 find_package(tf2_eigen REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
@@ -28,6 +30,7 @@ ament_target_dependencies(
         tf2_ros
         nav_msgs
         std_msgs
+        nav2_msgs
         tf2_eigen
         sensor_msgs
         geometry_msgs
@@ -37,6 +40,7 @@ target_link_libraries(
         Boost::graph
         Boost::chrono
         Eigen3::Eigen
+        OpenMP::OpenMP_CXX
 )
 
 install(
