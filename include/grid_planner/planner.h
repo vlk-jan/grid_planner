@@ -495,8 +495,10 @@ public:
       Vec3 p(x_it[0], x_it[1], x_it[2]);
       p = transform * p;
       for (int j = 0; j < levels.size(); ++j) {
-        grid_.updatePointCost({p.x(), p.y()}, levels[j],
-                              weights[j] * cost_iters[j][0]);
+        if (std::isfinite(cost_iters[j][0])) {
+          grid_.updatePointCost({p.x(), p.y()}, levels[j],
+                                weights[j] * cost_iters[j][0]);
+        }
         ++cost_iters[j];
       }
     }
