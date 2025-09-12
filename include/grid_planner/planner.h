@@ -185,6 +185,20 @@ public:
         nh_->declare_parameter<float>("goal_reached_dist", goal_reached_dist_);
     mode_ = nh_->declare_parameter<int>("mode", mode_);
 
+    // Ad-hoc cost parameters
+    adhoc_costs_ = nh_->declare_parameter("adhoc_costs", adhoc_costs_);
+    adhoc_layer_ = nh_->declare_parameter("adhoc_layer", adhoc_layer_);
+
+    // Sidelobes strategy parameters
+    sidelobes_offset_distance_ = nh_->declare_parameter(
+        "sidelobes_offset_distance", sidelobes_offset_distance_);
+    sidelobes_radius_ = nh_->declare_parameter(
+        "sidelobes_radius", sidelobes_radius_);
+    sidelobes_cost_ = nh_->declare_parameter(
+        "sidelobes_cost", sidelobes_cost_);
+    sidelobes_angle_offsets_ = nh_->declare_parameter(
+        "sidelobes_angle_offsets", sidelobes_angle_offsets_);
+
     tf_ = std::make_shared<tf2_ros::Buffer>(nh_->get_clock());
     tf_sub_ = std::make_shared<tf2_ros::TransformListener>(*tf_);
 
@@ -335,6 +349,22 @@ public:
                 "Closest traversable point to start: %s (%.3f).",
                 format(toVec3(grid_.point(v0))).c_str(), best_dist);
 
+    // Apply ad-hoc costs if enabled
+    if (!adhoc_costs_.empty()) {
+      Timer t_adhoc;
+      clearAdHocLayer();
+      
+      // Extract robot yaw from start pose orientation
+      auto &q = start.pose.orientation;
+      float robot_yaw = atan2(2.0f * (q.w * q.z + q.x * q.y),
+                              1.0f - 2.0f * (q.y * q.y + q.z * q.z));
+      
+      applyAdHocCosts(p0, robot_yaw);
+      RCLCPP_DEBUG(nh_->get_logger(),
+                   "Applied ad-hoc costs at robot position %s, yaw %.3f rad: %.3f s.",
+                   format(p0).c_str(), robot_yaw, t_adhoc.seconds_elapsed());
+    }
+
     ShortestPaths sp(grid_, v0, neighborhood_, max_costs_);
     RCLCPP_INFO(nh_->get_logger(), "Dijkstra (%lu pts): %.3f s.", grid_.size(),
                 t_part.seconds_elapsed());
@@ -440,6 +470,47 @@ public:
                 nav2_msgs::srv::ClearEntireCostmap::Response::SharedPtr res) {
     grid_.clear();
     RCLCPP_WARN(nh_->get_logger(), "Map cleared.");
+  }
+
+  void clearAdHocLayer() {
+    if (adhoc_layer_ < 0 || adhoc_layer_ >= 4) {
+      return;
+    }
+    Cost default_cost = default_costs_[adhoc_layer_];
+    for (VertexId v = 0; v < grid_.size(); ++v) {
+      grid_.costs(v)[adhoc_layer_] = default_cost;
+    }
+  }
+
+  void applySidelobesCosts(const Vec3 &robot_pos, float robot_yaw) {
+    if (adhoc_layer_ < 0 || adhoc_layer_ >= 4) {
+      return;
+    }
+
+    for (const auto &angle_offset : sidelobes_angle_offsets_) {
+      float angle_rad = angle_offset * M_PI / 180.0f;
+      Vec3 center(
+          robot_pos.x() + sidelobes_offset_distance_ * cos(robot_yaw + angle_rad),
+          robot_pos.y() + sidelobes_offset_distance_ * sin(robot_yaw + angle_rad),
+          0.0f);
+      
+      for (VertexId v = 0; v < grid_.size(); ++v) {
+        Vec3 cell_pos = toVec3(grid_.point(v));
+        float dist = (cell_pos - center).norm();
+        
+        if (dist <= sidelobes_radius_) {
+          grid_.costs(v)[adhoc_layer_] = sidelobes_cost_;
+        }
+      }
+    }
+  }
+
+  void applyAdHocCosts(const Vec3 &robot_pos, float robot_yaw) {
+    for (const auto &strategy : adhoc_costs_) {
+      if (strategy == "sidelobes") {
+        applySidelobesCosts(robot_pos, robot_yaw);
+      }
+    }
   }
 
   void planningTimer() {
@@ -575,6 +646,16 @@ protected:
   bool stop_on_goal_{true};
   float goal_reached_dist_{std::numeric_limits<float>::quiet_NaN()};
   int mode_{2};
+
+  // Ad-hoc costs
+  std::vector<std::string> adhoc_costs_{};
+  int adhoc_layer_{3};
+
+  // Sidelobes strategy
+  float sidelobes_offset_distance_{1.0f};
+  float sidelobes_radius_{0.5f};
+  float sidelobes_cost_{10.0f};
+  std::vector<double> sidelobes_angle_offsets_{-90.0f, -90.0f};
 };
 
 } // namespace grid
