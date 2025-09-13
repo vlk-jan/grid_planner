@@ -184,6 +184,8 @@ public:
     goal_reached_dist_ =
         nh_->declare_parameter<float>("goal_reached_dist", goal_reached_dist_);
     mode_ = nh_->declare_parameter<int>("mode", mode_);
+    plan_to_goal_ =
+        nh_->declare_parameter<bool>("plan_to_goal", plan_to_goal_);
 
     // Ad-hoc cost parameters
     adhoc_costs_ = nh_->declare_parameter("adhoc_costs", adhoc_costs_);
@@ -365,7 +367,13 @@ public:
                    format(p0).c_str(), robot_yaw, t_adhoc.seconds_elapsed());
     }
 
-    ShortestPaths sp(grid_, v0, neighborhood_, max_costs_);
+    // ShortestPaths sp(grid_, v0, v1, neighborhood_, max_costs_);
+    std::optional<VertexId> v1 = std::nullopt;
+    if (plan_to_goal_ && isValid(req->goal.pose.position)) {
+      p1.z() = 0.f;
+      v1 = grid_.cellId(grid_.pointToCell({p1.x(), p1.y()}));
+    }
+    ShortestPaths sp(grid_, v0, v1, neighborhood_, max_costs_);
     RCLCPP_INFO(nh_->get_logger(), "Dijkstra (%lu pts): %.3f s.", grid_.size(),
                 t_part.seconds_elapsed());
     createAndPublishMapCloud(sp);
@@ -646,6 +654,7 @@ protected:
   bool stop_on_goal_{true};
   float goal_reached_dist_{std::numeric_limits<float>::quiet_NaN()};
   int mode_{2};
+  bool plan_to_goal_{false};
 
   // Ad-hoc costs
   std::vector<std::string> adhoc_costs_{};
