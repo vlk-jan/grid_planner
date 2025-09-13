@@ -40,6 +40,7 @@ def generate_launch_description():
                     "stop_on_goal": True,
                     "goal_reached_dist": 0.5,
                     "mode": 2,
+                    "plan_to_goal": True,
                     # Ad-hoc cost parameters
                     "adhoc_costs": ["sidelobes"],
                     "adhoc_layer": 3,
