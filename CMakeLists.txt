@@ -52,7 +52,16 @@ install(
 install(
     DIRECTORY
         launch
+        config
     DESTINATION share/${PROJECT_NAME}
+)
+
+install(
+    PROGRAMS
+        scripts/mock_map_publisher.py
+        scripts/mock_tf_publisher.py
+        scripts/test_planner_client.py
+    DESTINATION lib/${PROJECT_NAME}
 )
 
 ament_export_include_directories(include)

@@ -22,8 +22,8 @@ def generate_launch_description():
                         "cost_fields": ["cost", "semantic", "geometric"],
                         "which_cloud": [0, 1, 1],
                         "cloud_weights": [1.0, 1.0, 1.0],
-                        "max_costs": [float("nan"), float("nan"), float("nan")],
-                        "default_costs": [float("nan"), float("nan"), float("nan")],
+                        "max_costs": [float("nan"), float("nan"), float("nan"), float("nan")],
+                        "default_costs": [float("nan"), float("nan"), float("nan"), float("nan")],
                         "neighborhood": 8,
                         "min_path_cost": 1.0,
                         "planning_freq": 1.0,
@@ -34,6 +34,14 @@ def generate_launch_description():
                         "stop_on_goal": True,
                         "goal_reached_dist": 3.0,
                         "mode": 2,
+                        # Ad-hoc cost parameters; uncomment to enable
+                        # "adhoc_costs": ["sidelobes"],
+                        "adhoc_layer": 3,
+                        # Sidelobes strategy parameters
+                        "sidelobes_offset_distance": 1.0,
+                        "sidelobes_radius": 0.8,
+                        "sidelobes_cost": 10.0,
+                        "sidelobes_angle_offsets": [-90.0, 90.0, 180.0],
                     }
                 ],
                 remappings=[
